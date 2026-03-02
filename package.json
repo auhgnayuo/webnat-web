@@ -1,0 +1,35 @@
+{
+  "name": "webnat",
+  "version": "1.0.0",
+  "description": "A lightweight WebView-Native bridge library supporting raw messages, broadcast, and RPC.",
+  "author": "Auhgnayuo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/auhgnayuo/webnat-web.git"
+  },
+  "homepage": "https://github.com/auhgnayuo/webnat-web",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": true,
+  "browser": "./dist/index.js",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsup --watch",
+    "prepare": "tsup",
+    "build": "tsup",
+    "test": "node --import tsx --test ./test/message.test.ts"
+  },
+  "peerDependencies": {},
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsup": "^8.5.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  }
+}
