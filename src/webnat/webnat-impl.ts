@@ -115,12 +115,12 @@ export class WebnatImpl implements Webnat {
    * 异步流式监听指定事件名称的广播消息
    *
    * 用法示例：
-   *   for await (const params of webnat.listenBroadcast("event")) { ... }
+   *   for await (const param of webnat.listenBroadcast("event")) { ... }
    *
    * @param name 事件名称
    * @returns AsyncIterable<Param> 可异步遍历的事件参数序列
    */
-  async *listenBroadcast(name: string): AsyncIterable<Param> {
+  listenBroadcast(name: string): AsyncIterable<Param> {
     return this.broadcastWebnat.listen(name);
   }
 
@@ -199,7 +199,6 @@ export class WebnatImpl implements Webnat {
       timeout?: number;
       onNotification?: (param: Param) => void;
       signal?: AbortSignal;
-      immediately?: boolean;
     }
   ): Promise<Param> {
     return this.methodWebnat.method(func, options);
@@ -404,7 +403,6 @@ export class WebnatImpl implements Webnat {
    * - iframe：通过 postMessage 发送给 mainframe，由 mainframe 转发给 Native
    *
    * @param message 消息对象
-   * @param immediately 是否立即发送（仅 mainframe 有效，iframe 总是立即发送）
    */
   private sendMessage = (message: Message) => {
     if (this.isMainframe()) {
