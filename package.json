@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/auhgnayuo/webnat-web.git"
+    "url": "git+https://github.com/auhgnayuo/webnat-web.git"
   },
   "homepage": "https://github.com/auhgnayuo/webnat-web",
   "type": "module",
