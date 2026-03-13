@@ -6,7 +6,7 @@
  * 此时导出 undefined。
  */
 
-import { getWindowAsAny } from '../utils';
+import { getWindowAsAny } from '../util';
 import { WebnatImpl } from './webnat-impl';
 import { Webnat } from './webnat';
 

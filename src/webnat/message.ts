@@ -13,6 +13,7 @@ export type Param =
   | number
   | boolean
   | null
+  | undefined
   | Param[]
   | { [key: string]: Param };
 

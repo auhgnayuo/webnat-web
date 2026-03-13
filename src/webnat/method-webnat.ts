@@ -23,7 +23,7 @@
  * - 取消请求：包含 abort 字段
  */
 
-import { getUuid } from '../utils';
+import { getUuid } from '../util';
 import { WebnatError } from './error';
 import { Message, Param } from './message';
 

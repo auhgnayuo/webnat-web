@@ -9,7 +9,7 @@ import { Message, Param } from './message';
 import { MethodWebnat } from './method-webnat';
 import { RawWebnat } from './raw-webnat';
 import { Webnat } from './webnat';
-import { getUuid, getWindow, getWindowAsAny } from '../utils';
+import { getUuid, getWindow, getWindowAsAny } from '../util';
 
 export class WebnatImpl implements Webnat {
   /**
