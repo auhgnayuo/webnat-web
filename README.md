@@ -43,7 +43,7 @@ Webnat requires a Native-side implementation:
 
 | Platform | Repository |
 |----------|------------|
-| iOS / macOS (Swift) | [webnat-os](https://github.com/auhgnayuo/webnat-os) |
+| iOS / macOS (Swift) | [webnat-darwin](https://github.com/auhgnayuo/webnat-darwin) |
 | Android (Kotlin) | [webnat-android](https://github.com/auhgnayuo/webnat-android) |
 | HarmonyOS (ArkTS) | [webnat-ohos](https://github.com/auhgnayuo/webnat-ohos) |
 
