@@ -80,4 +80,19 @@ describe('MethodWebnat', () => {
     assert.ok(reply?.reply);
     assert.equal((reply!.reply!.error as any)?.code, WebnatErrorCode.UNIMPLEMENTED);
   });
+
+  it('rejects immediately when signal is already aborted', async () => {
+    const sent: Message[] = [];
+    const rpc = new MethodWebnat('self', (message: Message) => sent.push(message));
+    const controller = new AbortController();
+    controller.abort();
+
+    await assert.rejects(
+      rpc.method({ method: 'x' }, { signal: controller.signal }),
+      (err: any) => err?.code === WebnatErrorCode.CANCELLED
+    );
+
+    // 不应发出任何 invoke / abort 消息：调用在最早期就被拒绝
+    assert.equal(sent.length, 0);
+  });
 });

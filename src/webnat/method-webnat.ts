@@ -147,7 +147,7 @@ export class MethodWebnat {
    * @param options 调用选项
    * @param options.timeout 超时时间（毫秒），超时后自动取消并抛出 'Operation Timeout' 错误
    * @param options.onNotification 收到通知消息时的回调函数
-   * @param options.signal 可选，AbortSignal，用于主动取消操作
+   * @param options.signal 可选，AbortSignal，用于主动取消操作；若传入时已是 aborted 状态，调用会立即拒绝（cancelled）
    * @returns Promise<Param>，resolve 时返回结果，reject 时返回错误
    */
   async method(
@@ -161,6 +161,11 @@ export class MethodWebnat {
       signal?: AbortSignal;
     }
   ): Promise<Param> {
+    // 已 aborted 的 signal 上不会再触发 'abort' 事件，注册监听器会“漏接”取消。
+    // 在最早期就立即拒绝，符合 fetch / 标准 API 的语义。
+    if (options?.signal?.aborted) {
+      throw WebnatError.cancelled();
+    }
     // 生成唯一调用 ID
     const id = getUuid();
 

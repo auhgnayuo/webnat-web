@@ -187,7 +187,7 @@ export class WebnatImpl implements Webnat {
    * @param options 调用选项
    * @param options.timeout 超时时间（毫秒），超时后自动取消并抛出 'Operation Timeout' 错误
    * @param options.onNotification 收到通知消息时的回调函数
-   * @param options.signal 可选，AbortSignal，用于主动取消操作
+   * @param options.signal 可选，AbortSignal，用于主动取消操作；若传入时已是 aborted 状态，Promise 会立即拒绝（cancelled）
    * @returns Promise，resolve 时返回结果，reject 时返回错误
    */
   async method(
