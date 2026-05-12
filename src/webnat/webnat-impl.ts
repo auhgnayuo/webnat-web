@@ -249,12 +249,14 @@ export class WebnatImpl implements Webnat {
    * 加载连接
    *
    * 初始化事件监听并建立与 Native 的连接：
-   * 1. 注册 unload 事件监听器（页面卸载时清理）
+   * 1. 注册 pagehide 事件监听器（页面卸载/进入 bfcache 时清理；现代浏览器对 unload 已逐步弃用）
    * 2. 注册 message 事件监听器（处理来自 iframe/mainframe 的消息）
    * 3. 发送 OPEN 消息通知 Native 端连接已建立
    */
   private load = () => {
-    getWindow().addEventListener('unload', this.unload);
+    // 优先使用 `pagehide`：在现代浏览器（含 bfcache 场景）下比 `unload` 更可靠；
+    // `unload` 已被 Chrome / Safari 列入弃用路线，可能不会触发。
+    getWindow().addEventListener('pagehide', this.unload);
     getWindow().addEventListener('message', this.onEvent);
 
     // 通知 Native 端连接已建立
@@ -265,7 +267,7 @@ export class WebnatImpl implements Webnat {
   /**
    * 卸载连接
    *
-   * 页面卸载时调用，清理资源并通知 Native 端连接关闭：
+   * 页面卸载时调用（`pagehide`），清理资源并通知 Native 端连接关闭：
    * 1. 移除事件监听器
    * 2. 如果是 mainframe，代理通知 Native 所有 iframe 连接已关闭
    * 3. 通知 Native 当前连接已关闭（立即发送）
@@ -273,13 +275,15 @@ export class WebnatImpl implements Webnat {
    */
   private unload = () => {
     // 移除事件回调函数
-    getWindow().removeEventListener('unload', this.unload);
+    getWindow().removeEventListener('pagehide', this.unload);
     getWindow().removeEventListener('message', this.onEvent);
 
     this.transmits.forEach((_, id) => {
       const message = Message.close(id);
       this.sendMessage(message);
     });
+    // 清空 transmits，避免残留可能已死的 source 引用
+    this.transmits.clear();
     // 通知 Native 当前连接已关闭（立即发送，不等待定时器）
     const message = Message.close(this.id);
     this.sendMessage(message);
