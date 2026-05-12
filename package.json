@@ -1,6 +1,6 @@
 {
   "name": "webnat",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A lightweight WebView-Native bridge library supporting raw messages, broadcast, and RPC.",
   "author": "Auhgnayuo",
   "license": "MIT",
