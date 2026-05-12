@@ -289,6 +289,29 @@ export class WebnatImpl implements Webnat {
     this.rawWebnat.unload();
   };
 
+  /**
+   * 替已失联的 iframe 走 close 流程
+   *
+   * 当 mainframe 向某个 iframe `postMessage` 失败（iframe 已被 JS 删除、
+   * 跨域销毁、或 `event.source` 为 null）时，由 mainframe 主动替它通知 Native，
+   * 防止 transmits 残留 dead source 引用以及 Native 侧连接残留。
+   *
+   * 该方法是幂等的：若 `iframeId` 已不在 transmits 中则不重复发送 close。
+   *
+   * @param iframeId 失联 iframe 的连接 ID
+   */
+  private handleIframeGone = (iframeId: string) => {
+    if (!this.transmits.has(iframeId)) {
+      return;
+    }
+    this.transmits.delete(iframeId);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[Webnat] iframe ${iframeId} unreachable; sending close on its behalf.`);
+    }
+    const closeMessage = Message.close(iframeId);
+    this.sendMessage(closeMessage);
+  };
+
   // ==================== 私有辅助方法 ====================
 
   /**
@@ -350,9 +373,22 @@ export class WebnatImpl implements Webnat {
         if (to === Message.NATIVE_UUID) {
           if (message.open) {
             // 注册 iframe 的消息转发函数
-            const source = event.source;
-            this.transmits.set(from, (message: Message) => {
-              source.postMessage(message, '*');
+            const source = event.source as Window | null;
+            this.transmits.set(from, (msg: Message) => {
+              if (!source) {
+                // 源已失联：替 iframe 走 close 流程
+                this.handleIframeGone(from);
+                return;
+              }
+              try {
+                source.postMessage(msg, '*');
+              } catch (error) {
+                // iframe 已销毁/跨域不可达：替它走 close 流程
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('[Webnat] postMessage to iframe failed:', error);
+                }
+                this.handleIframeGone(from);
+              }
             });
           } else if (message.close) {
             // 移除 iframe 的消息转发函数
