@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-02
+
+### Changed
+
+- **Version alignment**: bumped to `1.2.0` to keep a single, unified version across all four platforms (web, darwin, android, ohos). There are **no functional changes on the web side** in this release — the new native-side `method` broadcast (calling all frames when no connection is specified, first meaningful response wins) is fully transparent to the web responder and requires no web changes.
+
 ## [1.0.4] - 2026-05-12
 
 ### Fixed

@@ -32,7 +32,7 @@ Or add to your `package.json`:
 ```json
 {
   "dependencies": {
-    "webnat": "1.0.4"
+    "webnat": "1.2.0"
   }
 }
 ```
