@@ -11,14 +11,19 @@ export function installBrowserGlobals(options?: { userAgent?: string }): () => v
   });
   const w = dom.window as unknown as Window & typeof globalThis;
 
-  const prev: Record<string, unknown> = {};
+  const missing = Symbol.for('webnat-test-missing');
+  const prev: Record<string, PropertyDescriptor | typeof missing> = {};
   const set = (key: string, value: unknown) => {
-    if (!(key in globalThis)) {
-      prev[key] = Symbol.for('webnat-test-missing');
-    } else {
-      prev[key] = (globalThis as unknown as Record<string, unknown>)[key];
-    }
-    (globalThis as unknown as Record<string, unknown>)[key] = value;
+    const existing = Object.getOwnPropertyDescriptor(globalThis, key);
+    prev[key] = existing ?? missing;
+    // 直接赋值对 getter-only 的全局属性（如 Node 21+ 内置的 navigator）会抛
+    // "Cannot set property ... which has only a getter"，因此统一用 defineProperty 覆盖。
+    Object.defineProperty(globalThis, key, {
+      value,
+      configurable: true,
+      writable: true,
+      enumerable: true,
+    });
   };
 
   set('window', w);
@@ -49,11 +54,11 @@ export function installBrowserGlobals(options?: { userAgent?: string }): () => v
   }
 
   return () => {
-    for (const [key, value] of Object.entries(prev)) {
-      if (value === Symbol.for('webnat-test-missing')) {
+    for (const [key, descriptor] of Object.entries(prev)) {
+      if (descriptor === missing) {
         Reflect.deleteProperty(globalThis, key);
       } else {
-        (globalThis as unknown as Record<string, unknown>)[key] = value;
+        Object.defineProperty(globalThis, key, descriptor);
       }
     }
   };
