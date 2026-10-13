@@ -5,11 +5,26 @@
  */
 
 import { BroadcastWebnat } from './broadcast-webnat';
+import { WebnatError } from './error';
 import { Message, Param } from './message';
 import { MethodWebnat } from './method-webnat';
 import { RawWebnat } from './raw-webnat';
 import { Webnat } from './webnat';
 import { getUuid, getWindow, getWindowAsAny } from '../util';
+
+/**
+ * 把消息序列化为 JSON 字符串
+ *
+ * 序列化失败（BigInt、循环引用等）统一抛出 SERIALIZATION_FAILED，
+ * 使 method() 以明确的错误码立即失败，handler 的结果无法序列化时也回复同一个错误码。
+ */
+const stringify = (message: Message): string => {
+  try {
+    return JSON.stringify(message);
+  } catch (error) {
+    throw WebnatError.serializationFailed(error);
+  }
+};
 
 export class WebnatImpl implements Webnat {
   /**
@@ -475,11 +490,18 @@ export class WebnatImpl implements Webnat {
     if (win.webkit?.messageHandlers?.__native_webnat__?.postMessage) {
       // iOS/macOS 平台：直接传递对象
       const iosHandler = win.webkit.messageHandlers.__native_webnat__;
-      handler = (message: Message) => iosHandler.postMessage(message);
+      handler = (message: Message) => {
+        try {
+          iosHandler.postMessage(message);
+        } catch (error: any) {
+          // 结构化克隆失败（函数、Symbol 等）与 JSON 序列化失败是同一语义
+          throw error?.name === 'DataCloneError' ? WebnatError.serializationFailed(error) : error;
+        }
+      };
     } else if (win.__native_webnat__?.postMessage) {
       // Android/HarmonyOS 平台：需要传递 JSON 字符串
       const androidHandler = win.__native_webnat__;
-      handler = (message: Message) => androidHandler.postMessage(JSON.stringify(message));
+      handler = (message: Message) => androidHandler.postMessage(stringify(message));
     }
     if (handler) {
       // 检测到可用平台后，重写自身为直接调用（避免后续的平台检测）

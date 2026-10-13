@@ -30,7 +30,7 @@ pnpm add webnat
 ```json
 {
   "dependencies": {
-    "webnat": "1.2.0"
+    "webnat": "1.4.0"
   }
 }
 ```

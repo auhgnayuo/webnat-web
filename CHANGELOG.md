@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-13
+
+### Changed
+
+- **A message that cannot be serialized now fails with `SERIALIZATION_FAILED` (-1012).** A BigInt or a circular structure in `param`, or a value the iOS bridge cannot clone (`DataCloneError`), used to surface as a raw `TypeError` / `DOMException`. Now `method` rejects with a `WebnatError` carrying that code, and a handler whose result cannot be serialized is answered with an error reply carrying the same code (it was -1). Same semantics as the native ports, which now fail a send visibly instead of swallowing it.
+
 ## [1.2.0] - 2026-07-02
 
 ### Changed

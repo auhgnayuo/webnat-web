@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 
 import { installBrowserGlobals } from './helpers/install-dom';
 import { WebnatImpl } from '../src/webnat/webnat-impl';
-import { Message, Raw } from '../src/webnat/message';
+import { WebnatError, WebnatErrorCode } from '../src/webnat/error';
+import { Invoke, Message, Raw } from '../src/webnat/message';
 
 describe('WebnatImpl (jsdom / browser-like)', () => {
   let restore: () => void;
@@ -122,6 +123,65 @@ describe('WebnatImpl (jsdom / browser-like)', () => {
     );
   });
 
+  it('method() rejects at once with SERIALIZATION_FAILED when the parameter cannot be serialized (JSON bridge)', async () => {
+    const native: string[] = [];
+    (window as unknown as { __native_webnat__: { postMessage: (s: string) => void } }).__native_webnat__ =
+      {
+        postMessage(s: string) {
+          native.push(s);
+        },
+      };
+
+    const impl = new WebnatImpl();
+    await assert.rejects(
+      impl.method({ method: 'x', param: 10n as never }, { timeout: 1000 }),
+      (error: { code?: number }) => error.code === WebnatErrorCode.SERIALIZATION_FAILED
+    );
+    assert.equal(
+      native.some((s) => (JSON.parse(s) as { invoke?: unknown }).invoke !== undefined),
+      false,
+      'an unserializable call is not sent'
+    );
+
+    window.dispatchEvent(new Event('pagehide'));
+  });
+
+  it('answers a handler that throws (synchronously or not) or returns an unserializable result with an error reply', async () => {
+    const native: string[] = [];
+    (window as unknown as { __native_webnat__: { postMessage: (s: string) => void } }).__native_webnat__ =
+      {
+        postMessage(s: string) {
+          native.push(s);
+        },
+      };
+
+    const impl = new WebnatImpl();
+    const selfId = (JSON.parse(native[0]!) as { from: string }).from;
+    impl.onMethod('throws-sync', (() => {
+      throw new Error('boom');
+    }) as never);
+    impl.onMethod('throws-webnat-error', (() => {
+      throw new WebnatError(123, 'denied');
+    }) as never);
+    impl.onMethod('big', async () => 10n as never);
+    for (const [id, method] of [['call-1', 'throws-sync'], ['call-2', 'throws-webnat-error'], ['call-3', 'big']]) {
+      impl.receive(new Message(Message.NATIVE_UUID, selfId, undefined, undefined, undefined, undefined, new Invoke(id!, method!)));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const replies = native
+      .map((s) => JSON.parse(s) as { reply?: { id: string; result?: unknown; error?: { code: number; message: string } } })
+      .filter((m) => m.reply)
+      .map((m) => m.reply!);
+    const errorOf = (id: string) => replies.find((r) => r.id === id)?.error;
+    assert.deepEqual(errorOf('call-1'), { code: WebnatErrorCode.UNKNOWN, message: 'boom' });
+    assert.deepEqual(errorOf('call-2'), { code: 123, message: 'denied' });
+    assert.equal(errorOf('call-3')?.code, WebnatErrorCode.SERIALIZATION_FAILED);
+    assert.equal(replies.find((r) => r.id === 'call-3')?.result, undefined);
+
+    window.dispatchEvent(new Event('pagehide'));
+  });
+
   it('uses iOS object bridge when webkit handler is present', () => {
     const objects: unknown[] = [];
     const win = window as unknown as {
@@ -143,5 +203,39 @@ describe('WebnatImpl (jsdom / browser-like)', () => {
     assert.ok((objects[0] as any).open);
 
     window.dispatchEvent(new Event('pagehide'));
+  });
+
+  it('maps a DataCloneError of the iOS bridge to SERIALIZATION_FAILED and leaves other bridge errors alone', async () => {
+    const win = window as unknown as {
+      webkit?: { messageHandlers?: { __native_webnat__?: { postMessage: (o: unknown) => void } } };
+    };
+    let failure: Error | undefined;
+    win.webkit = {
+      messageHandlers: {
+        __native_webnat__: {
+          postMessage(o: unknown) {
+            if (failure && (o as { invoke?: unknown }).invoke) {
+              throw failure;
+            }
+          },
+        },
+      },
+    };
+    try {
+      const impl = new WebnatImpl();
+      failure = new DOMException('could not be cloned', 'DataCloneError');
+      await assert.rejects(
+        impl.method({ method: 'x' }, { timeout: 1000 }),
+        (error: { code?: number }) => error.code === WebnatErrorCode.SERIALIZATION_FAILED
+      );
+      failure = new Error('bridge went away');
+      await assert.rejects(
+        impl.method({ method: 'x' }, { timeout: 1000 }),
+        (error: Error) => error.message === 'bridge went away'
+      );
+      window.dispatchEvent(new Event('pagehide'));
+    } finally {
+      delete win.webkit;
+    }
   });
 });
